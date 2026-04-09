@@ -747,7 +747,21 @@ def _render_model_detail(row: pd.Series, dec) -> None:
     else:
         st.info("No primary metrics available for this row.")
 
-    with st.expander("Full model record (navigate by section)", expanded=False):
+    st.markdown(
+        "<div class='full-record-cta'>"
+        "<div class='full-record-title'>Full model record — navigate by section</div>"
+        "<p class='full-record-hint'>Identity, scale, KPIs, modality, governance controls, and more — "
+        "grouped into scannable blocks. <b>Click the expandable bar below</b> to see every populated "
+        "field from the enriched workbook.</p>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    # Anchor for CSS: dark blue expander label (Streamlit wraps markdown + expander in element-containers).
+    st.markdown(
+        '<span class="full-record-expander-anchor" aria-hidden="true"></span>',
+        unsafe_allow_html=True,
+    )
+    with st.expander("Open full model record (all sections) — click to expand", expanded=False):
         st.caption("Each section lists only fields that have values in the enriched workbook.")
         for title, cols in PROFILE_SECTIONS:
             sub = _section_metrics_dataframe(row, cols)
@@ -1069,6 +1083,43 @@ def main() -> None:
         opacity: 0.45;
         margin: 0 0 0.28rem 0;
         letter-spacing: 0.06em;
+    }
+    .full-record-cta {
+        margin: 0 0 10px 0;
+        padding: 0;
+    }
+    .full-record-cta .full-record-title {
+        font-size: 1.08rem;
+        font-weight: 700;
+        color: #0d47a1;
+        margin: 0 0 0.4rem 0;
+        letter-spacing: -0.02em;
+    }
+    .full-record-cta .full-record-hint {
+        font-size: 0.9rem;
+        opacity: 0.88;
+        margin: 0;
+        line-height: 1.4;
+        color: inherit;
+    }
+    .full-record-expander-anchor {
+        display: none;
+    }
+    /* Full model record expander label — same dark blue as .full-record-title */
+    div[data-testid="element-container"]:has(.full-record-expander-anchor)
+        + div[data-testid="element-container"]
+        [data-testid="stExpander"]
+        summary,
+    div[data-testid="element-container"]:has(.full-record-expander-anchor)
+        + div[data-testid="element-container"]
+        [data-testid="stExpander"]
+        summary p,
+    div[data-testid="element-container"]:has(.full-record-expander-anchor)
+        + div[data-testid="element-container"]
+        [data-testid="stExpander"]
+        summary span {
+        color: #0d47a1 !important;
+        font-weight: 600 !important;
     }
 </style>
 """,
