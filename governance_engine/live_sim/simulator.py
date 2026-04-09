@@ -62,16 +62,26 @@ def _next_ts(prev: float, rng: np.random.Generator) -> float:
 def _perturb(
     metric: str,
     value: float,
+    baseline: float,
     rng: np.random.Generator,
     *,
     shock: bool,
 ) -> float:
+    """
+    Fluctuate around the workbook baseline — not a pure random walk on [lo, hi].
+
+    A symmetric walk + clipping biases "good" values toward worse outcomes (more room
+    to move toward the middle of the band). Mean reversion to `baseline` removes that
+    drift; noise and optional shocks are zero-mean so some metrics move up and some down.
+    """
     lo, hi = mlib.bounds_for_metric(metric)
     span = hi - lo or 1.0
-    step = rng.normal(0, 0.012 * span)
+    theta = 0.085
+    pull = theta * (float(baseline) - float(value))
+    noise = rng.normal(0.0, 0.017 * span)
     if shock:
-        step += rng.choice([-1, 1]) * rng.uniform(0.04, 0.12) * span
-    v = value + step
+        noise += rng.normal(0.0, 0.085 * span)
+    v = float(value) + pull + noise
     return mlib.clip_metric(metric, v)
 
 
@@ -107,13 +117,14 @@ def seed_history(conn, df: pd.DataFrame, path_str: str, rng_base: int = 42) -> N
         if not mets:
             continue
         state = {met: mlib.initial_value_for_row(row, met) for met in mets}
+        baselines = {met: float(state[met]) for met in mets}
 
         t = start
         step_i = 0
         while t < now and step_i < MAX_SEED_STEPS:
-            shock = rng.random() < 0.04
             for met in mets:
-                state[met] = _perturb(met, state[met], rng, shock=shock)
+                met_shock = rng.random() < 0.05
+                state[met] = _perturb(met, state[met], baselines[met], rng, shock=met_shock)
                 _insert_event(conn, t, mid, met, state[met])
             t = _next_ts(t, rng)
             step_i += 1
@@ -166,12 +177,13 @@ def tick_once(conn, df: pd.DataFrame, now_ts: float | None = None) -> int:
             srow = df.loc[df["model"].astype(str) == mid].iloc[0]
             mets = mlib.metrics_for_row(srow)
             snap = load_snapshot_dict(conn, mid)
-            shock = rng.random() < 0.06
             for met in mets:
-                base = snap.get(met)
-                if base is None:
-                    base = mlib.initial_value_for_row(srow, met)
-                nv = _perturb(met, float(base), rng, shock=shock)
+                baseline = mlib.initial_value_for_row(srow, met)
+                cur = snap.get(met)
+                if cur is None:
+                    cur = baseline
+                met_shock = rng.random() < 0.05
+                nv = _perturb(met, float(cur), baseline, rng, shock=met_shock)
                 _insert_event(conn, now_ts, mid, met, nv)
                 n += 1
 
