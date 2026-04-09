@@ -1,0 +1,63 @@
+# Rule-based expected bands for POC governance engine (tune for your org).
+version: 1
+
+# Final risk_score = breach_weight * breach_score + stress_weight * (stress_index * 100)
+# Breach score = weighted sum of dimension severities (each 0..1), scaled to 0..100.
+score_blend:
+  breach: 0.52
+  stress: 0.48
+
+# Normalized telemetry stress (0..1); caps align with enriched sample fleet ranges.
+stress_index:
+  terms:
+    drift_index: { cap: 0.22, weight: 0.16 }
+    error_pct: { cap: 10.0, weight: 0.16 }
+    escalation_pct: { cap: 32.0, weight: 0.16 }
+    audit_coverage_gap: { weight: 0.12, gap_scale: 6.0 }
+    compliance_incidents: { cap: 3.0, weight: 0.10 }
+    anomaly_frequency: { cap: 12.0, weight: 0.10 }
+    policy_violation_rate: { cap: 0.006, weight: 0.08 }
+    security_anomaly_count: { cap: 6.0, weight: 0.08 }
+    manual_review_burden: { cap: 0.22, weight: 0.04 }
+
+# Calibrated for 50-model synthetic fleet; tune for production.
+risk_level_cutoffs:
+  low: 22
+  medium: 38
+  high: 68
+  # score >= high -> critical (see engine._risk_level_from_score)
+
+weights:
+  reliability: 0.34
+  narrative_assurance: 0.26
+  compliance_security: 0.26
+  auditability: 0.14
+
+defaults:
+  min_accuracy_pct: 80.0
+  max_error_pct: 8.0
+  max_drift_index: 0.22
+  max_escalation_pct: 22.0
+  max_latency_ratio: 1.38
+  min_grounding_score: 0.72
+  max_unsupported_claim_rate: 0.12
+  max_retrieval_failure_rate: 0.045
+  min_context_retrieval_hit_rate: 0.82
+  max_policy_violation_rate: 0.008
+  max_security_anomaly_count: 4
+  max_compliance_incidents: 2
+  min_audit_coverage_pct: 90.0
+  min_decision_trace_completeness: 0.74
+  min_output_consistency: 0.78
+
+per_archetype:
+  llm_rag:
+    min_grounding_score: 0.78
+    min_context_retrieval_hit_rate: 0.86
+  agentic_system:
+    max_escalation_pct: 18.0
+    min_decision_trace_completeness: 0.8
+  speech_asr:
+    max_error_pct: 9.0
+  vision_document:
+    min_field_validation_match_rate: 0.75

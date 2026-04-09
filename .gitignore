@@ -1,0 +1,16 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Generated at runtime (simulation state; re-seeded from workbook)
+live_telemetry.db
+*.db-journal
+
+# OS / editor
+.DS_Store
+Thumbs.db
